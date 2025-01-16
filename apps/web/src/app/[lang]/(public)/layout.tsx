@@ -41,7 +41,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
           />
         ))}
 
-        <TopTag />
+        {/* <TopTag /> */}
       </div>
       <div className="col-span-10 md:col-span-7">{children}</div>
       <div className="hide md:col-span-3">
