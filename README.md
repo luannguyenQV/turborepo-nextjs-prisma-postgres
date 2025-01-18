@@ -7,31 +7,13 @@
 
 # About next-forum
 
-next-forum is a next of forum with newest technology
+next-form is a minimal next-forum build with nextjs with AI
 
-# Installation
+# About technology
 
-Install
-
-```
-turbo install
-```
-
-In the `apps/web` folder, copy the env.example to env.local and enter the environment values
-
-In the `packages/database`, copy the env.example to .env and enter the DATABASE_URL
-
-Migration
-
-```
-db:migrate
-```
-
-Start
-
-```
-turbo dev
-```
+- This project uses [Turborepo](https://turbo.build/) alongside [Next.js](https://nextjs.org/).
+- The database is powered by PostgreSQL, managed with [Prisma](https://www.prisma.io/).
+- The user interface is styled using [TailwindCSS](https://tailwindcss.com/) for utility-first CSS and [shadcn/ui](https://shadcn.dev/) for component design.
 
 # Libraries
 
@@ -57,7 +39,32 @@ turbo dev
 - Husky
 - Prettier
 
+# Installation
+
+Install
+
+```
+turbo install
+```
+
+In the `apps/web` folder, copy the env.example to env.local and enter the environment values
+
+In the `packages/database`, copy the env.example to .env and enter the DATABASE_URL
+
+Migration
+
+```
+db:migrate
+```
+
+Start
+
+```
+turbo dev
+```
+
 # Folder structure
+
 
 ## Front side functions
 
@@ -86,5 +93,3 @@ turbo dev
 - [ ] Manage images
 - [ ] Settings: Header/Menu
 - [ ] Manage roles and permission
-
-# DEV NOTES
