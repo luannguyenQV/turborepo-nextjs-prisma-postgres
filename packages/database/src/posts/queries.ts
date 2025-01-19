@@ -1,5 +1,7 @@
 "use server"
 
+import { log } from "console"
+
 import { PostStatus, Prisma } from "@prisma/client"
 import dayjs from "dayjs"
 import slugify from "slugify"
@@ -164,6 +166,7 @@ export const getPosts = async (searchParams: TGetPostsRequest): Promise<TGetPost
       },
     }
   } catch (error) {
+    console.log(error)
     return {
       data: {
         data: [],

@@ -79,6 +79,15 @@ model PostMetaData {
   author    User     @relation(fields: [authorId], references: [id])
 }
 
+enum SocialProvider {
+  TWITTER
+  FACEBOOK
+  GITHUB
+  YOUTUBE
+  LINKEDIN
+  INSTAGRAM
+}
+
 model User {
   id             String          @id @default(cuid())
   name           String?
@@ -91,12 +100,8 @@ model User {
   website        String?
   address        String?
   phone          String?
-  twitter        String?
-  facebook       String?
-  github         String?
-  youtube        String?
-  linkedin       String?
-  instagram      String?
+  socialProvider SocialProvider?
+  socialId       String?
   totalFollower  Int             @default(0)
   totalFollowing Int             @default(0)
   totalPost      Int             @default(0)
@@ -106,7 +111,6 @@ model User {
   updatedAt      DateTime        @updatedAt
   accounts       Account[]
   comment        Comment[]
-  commentOnUser  CommentOnUser[]
   followers      Follower[]      @relation("follower")
   followings     Follower[]      @relation("following")
   images         Image[]
@@ -158,29 +162,16 @@ model Tag {
 }
 
 model Comment {
-  id              String          @id @default(cuid())
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  id              String   @id @default(cuid())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
   content         String?
   authorId        String
   parentCommentId String?
-  pinned          Boolean         @default(false)
+  pinned          Boolean  @default(false)
   commentOnPostId String
-  author          User            @relation(fields: [authorId], references: [id])
-  commentOnPost   Post            @relation(fields: [commentOnPostId], references: [id])
-  commentOnUser   CommentOnUser[]
-}
-
-model CommentOnUser {
-  createdAt DateTime          @default(now())
-  updatedAt DateTime          @updatedAt
-  userId    String
-  commentId String
-  type      CommentOnUserType @default(LIKE)
-  comment   Comment           @relation(fields: [commentId], references: [id])
-  user      User              @relation(fields: [userId], references: [id])
-
-  @@id([userId, commentId])
+  author          User     @relation(fields: [authorId], references: [id])
+  commentOnPost   Post     @relation(fields: [commentOnPostId], references: [id])
 }
 
 model Account {
@@ -280,6 +271,7 @@ enum PostStatus {
 }
 
 enum PostOnUserType {
+  COMMENT
   LIKE
   FAVORITE
   FOLLOW

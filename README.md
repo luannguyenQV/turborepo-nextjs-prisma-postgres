@@ -65,7 +65,6 @@ turbo dev
 
 # Folder structure
 
-
 ## Front side functions
 
 - [x] Register by email or github
