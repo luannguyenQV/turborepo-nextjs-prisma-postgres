@@ -8,118 +8,152 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ✅ User Model with Status
+model User {
+  id         String     @id @default(cuid())
+  name       String?
+  email      String?    @unique
+  username   String?    @unique
+  bio        String?
+  password   String?
+  userStatus UserStatus @default(UNVERIFIED)
+
+  groups        UserOnGroup[]
+  posts         Post[]
+  comments      Comment[]
+  postOnUser    PostOnUser[]
+  commentOnUser CommentOnUser[]
+  userOnTag     UserOnTag[]
+  followers     Follower[]      @relation("follower")
+  followings    Follower[]      @relation("following")
+  group         Group[]
+  account       Account[]
+  session       Session[]
+  media         Media[]
+}
+
+// ✅ Group & UserOnGroup for Roles
+model Group {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  description String?
+  ownerId     String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  mediaId     String?
+  media       Media?    @relation(fields: [mediaId], references: [id])
+
+  owner   User          @relation(fields: [ownerId], references: [id])
+  members UserOnGroup[]
+
+  @@index([deletedAt]) // Index for performance
+}
+
+model UserOnGroup {
+  userId  String
+  groupId String
+  role    GroupRole @default(MEMBER)
+  user    User      @relation(fields: [userId], references: [id])
+  group   Group     @relation(fields: [groupId], references: [id])
+
+  @@id([userId, groupId])
+}
+
+// ✅ Post with Extended Status
 model Post {
-  id           String       @id @default(cuid())
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  title        String       @db.VarChar(255)
-  content      String?
-  slug         String       @unique @db.VarChar(255)
-  authorId     String
-  parentPostId String?
-  pinned       Boolean      @default(false)
-  userPinned   Boolean      @default(false)
-  postType     PostType     @default(POST)
-  postStatus   PostStatus   @default(DRAFT)
-  postFormat   PostFormat   @default(STANDARD)
-  totalComment Int          @default(0)
-  totalFollow  Int          @default(0)
-  totalLike    Int          @default(0)
-  totalShare   Int          @default(0)
-  totalView    Int          @default(0)
-  imageId      String?
-  comments     Comment[]
-  parentOf     ParentPost[] @relation("parentPost")
-  parent       ParentPost[] @relation("post")
-  author       User         @relation(fields: [authorId], references: [id])
-  image        Image?       @relation(fields: [imageId], references: [id])
-  postOnUser   PostOnUser[]
-  tagOnPost    TagOnPost[]
+  id         String     @id @default(cuid())
+  title      String     @db.VarChar(255)
+  content    String?
+  postStatus PostStatus @default(DRAFT)
+  authorId   String
+
+  author     User         @relation(fields: [authorId], references: [id])
+  comments   Comment[]
+  postOnUser PostOnUser[]
+  tagOnPost  TagOnPost[]
+  media      Media?       @relation(fields: [mediaId], references: [id])
+  mediaId    String?
+
+  @@index([title, content]) // Full-text search optimization
 }
 
-model ParentPost {
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  parentPostId String
-  postId       String
-  parentPost   Post     @relation("parentPost", fields: [parentPostId], references: [id])
-  post         Post     @relation("post", fields: [postId], references: [id])
+// ✅ Comment with Nested Replies & Likes/Votes
+model Comment {
+  id              String  @id @default(cuid())
+  content         String?
+  authorId        String
+  parentCommentId String?
+  commentOnPostId String
 
-  @@id([parentPostId, postId])
+  author        User @relation(fields: [authorId], references: [id])
+  commentOnPost Post @relation(fields: [commentOnPostId], references: [id])
+
+  parentComment Comment?  @relation("CommentThread", fields: [parentCommentId], references: [id])
+  replies       Comment[] @relation("CommentThread")
+
+  commentOnUser CommentOnUser[]
+
+  @@index([parentCommentId, content]) // Faster queries for nested comments
 }
 
+// ✅ Relationships for Tagging & Following Tags
+model Tag {
+  id          String      @id @default(cuid())
+  name        String      @unique
+  type        TagType     @default(TAG)
+  parentTagId String?
+  tagOnPost   TagOnPost[]
+  userOnTag   UserOnTag[]
+
+  parentTag Tag?    @relation("TagTree", fields: [parentTagId], references: [id])
+  children  Tag[]   @relation("TagTree")
+  media     Media?  @relation(fields: [mediaId], references: [id])
+  mediaId   String?
+
+  @@index([name])
+}
+
+model TagOnPost {
+  postId String
+  tagId  String
+  post   Post   @relation(fields: [postId], references: [id])
+  tag    Tag    @relation(fields: [tagId], references: [id])
+
+  @@id([postId, tagId])
+}
+
+model UserOnTag {
+  userId String
+  tagId  String
+  user   User   @relation(fields: [userId], references: [id])
+  tag    Tag    @relation(fields: [tagId], references: [id])
+
+  @@id([userId, tagId])
+}
+
+// ✅ Liking & Voting on Comments & Posts
 model PostOnUser {
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-  userId    String
-  postId    String
-  type      PostOnUserType @default(LIKE)
-  post      Post           @relation(fields: [postId], references: [id])
-  user      User           @relation(fields: [userId], references: [id])
+  userId String
+  postId String
+  type   PostOnUserType
+  user   User           @relation(fields: [userId], references: [id])
+  post   Post           @relation(fields: [postId], references: [id])
 
   @@id([userId, postId, type])
 }
 
-model PostContentType {
-  id          String   @id @default(cuid())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  name        String   @unique @db.VarChar(255)
-  slug        String   @unique @db.VarChar(255)
-  description String?
+model CommentOnUser {
+  userId    String
+  commentId String
+  type      CommentOnUserType
+  user      User              @relation(fields: [userId], references: [id])
+  comment   Comment           @relation(fields: [commentId], references: [id])
+
+  @@id([userId, commentId, type])
 }
 
-model PostMetaData {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  title     String   @db.VarChar(255)
-  content   String?
-  authorId  String
-  author    User     @relation(fields: [authorId], references: [id])
-}
-
-enum SocialProvider {
-  TWITTER
-  FACEBOOK
-  GITHUB
-  YOUTUBE
-  LINKEDIN
-  INSTAGRAM
-}
-
-model User {
-  id             String          @id @default(cuid())
-  name           String?
-  email          String?         @unique
-  emailVerified  DateTime?
-  image          String?
-  userType       UserType        @default(AUTHOR)
-  username       String?         @unique
-  bio            String?
-  website        String?
-  address        String?
-  phone          String?
-  socialProvider SocialProvider?
-  socialId       String?
-  totalFollower  Int             @default(0)
-  totalFollowing Int             @default(0)
-  totalPost      Int             @default(0)
-  totalView      Int             @default(0)
-  password       String?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  accounts       Account[]
-  comment        Comment[]
-  followers      Follower[]      @relation("follower")
-  followings     Follower[]      @relation("following")
-  images         Image[]
-  post           Post[]
-  postMetaData   PostMetaData[]
-  postOnUser     PostOnUser[]
-  sessions       Session[]
-}
-
+// ✅ Following Users (Followers System)
 model Follower {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -131,62 +165,15 @@ model Follower {
   @@id([followerId, followingId])
 }
 
-model TagOnPost {
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  postId    String
-  tagId     String
-  post      Post     @relation(fields: [postId], references: [id])
-  tag       Tag      @relation(fields: [tagId], references: [id])
-
-  @@id([postId, tagId])
-}
-
-model Tag {
-  id             String      @id @default(cuid())
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-  type           TagType     @default(TAG)
-  name           String      @unique @db.VarChar(255)
-  slug           String      @unique @db.VarChar(255)
-  description    String?
-  parent         String?     @db.VarChar(255)
-  count          Int         @default(0)
-  totalFollowers Int         @default(0)
-  totalLike      Int         @default(0)
-  totalPost      Int         @default(0)
-  totalView      Int         @default(0)
-  imageId        String?
-  tagOnPost      TagOnPost[]
-  image          Image?      @relation(fields: [imageId], references: [id])
-}
-
-model Comment {
-  id              String   @id @default(cuid())
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  content         String?
-  authorId        String
-  parentCommentId String?
-  pinned          Boolean  @default(false)
-  commentOnPostId String
-  author          User     @relation(fields: [authorId], references: [id])
-  commentOnPost   Post     @relation(fields: [commentOnPostId], references: [id])
-}
-
+// ✅ Authentication & Sessions
 model Account {
   id                String  @id @default(cuid())
   userId            String
-  type              String
   provider          String
   providerAccountId String
   refresh_token     String?
   access_token      String?
   expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?
-  session_state     String?
   user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
@@ -208,14 +195,11 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-model Image {
-  id         String   @id @default(cuid())
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+// ✅ Media Handling
+model Media {
+  id         String  @id @default(cuid())
   path       String
   name       String
-  hash       String
-  ext        String
   width      Int
   height     Int
   format     String
@@ -224,15 +208,33 @@ model Image {
   url        String
   mime       String
   userId     String
-  user       User     @relation(fields: [userId], references: [id])
+  user       User    @relation(fields: [userId], references: [id])
   posts      Post[]
   tags       Tag[]
+  Group      Group[]
+
+  @@index([name]) // Optimize media lookups
 }
 
-enum UserType {
-  ADMIN
+// ✅ ENUMs
+enum SocialProvider {
+  GOOGLE
+  FACEBOOK
+  TWITTER
+  LINKEDIN
+}
+
+enum UserStatus {
+  UNVERIFIED
+  VERIFIED
+  BLOCKED
+}
+
+enum GroupRole {
+  MEMBER
   MODERATOR
-  AUTHOR
+  ADMIN
+  OWNER
 }
 
 enum PostType {
@@ -268,6 +270,9 @@ enum PostFormat {
 enum PostStatus {
   DRAFT
   PUBLISHED
+  ARCHIVED
+  TRASHED
+  BLOCKED
 }
 
 enum PostOnUserType {
@@ -281,8 +286,7 @@ enum PostOnUserType {
 
 enum CommentOnUserType {
   LIKE
-  FAVORITE
-  FOLLOW
-  BOOKMARK
-  PINNED
+  SHARE
+  UPVOTE
+  DOWNVOTE
 }
