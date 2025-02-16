@@ -20,7 +20,6 @@
 - Post's status can be: DRAFT, PUBLISHED, ARCHIVED, TRASHED, BLOCKED
 - User's status can be: UNVERIFIED, VERIFIED, BLOCKED
 
-
 ```mermaid
 erDiagram
     User {
