@@ -10,32 +10,74 @@ datasource db {
 
 // ✅ User Model with Status
 model User {
-  id         String     @id @default(cuid())
-  name       String?
-  email      String?    @unique
-  username   String?    @unique
-  bio        String?
-  password   String?
-  userStatus UserStatus @default(UNVERIFIED)
+  id          String     @id @default(cuid())
+  email       String?    @unique
+  username    String     @unique
+  firstName   String?
+  lastName    String?
+  bio         String?
+  password    String?
+  userStatus  UserStatus @default(UNVERIFIED)
+  trustLevel  TrustLevel @default(NEW)
+  lastSeenAt  DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  isAdmin     Boolean    @default(false)
+  isModerator Boolean    @default(false)
 
-  groups        UserOnGroup[]
-  posts         Post[]
-  comments      Comment[]
-  postOnUser    PostOnUser[]
-  commentOnUser CommentOnUser[]
-  userOnTag     UserOnTag[]
-  followers     Follower[]      @relation("follower")
-  followings    Follower[]      @relation("following")
-  group         Group[]
-  account       Account[]
-  session       Session[]
-  media         Media[]
+  groups          UserOnGroup[]
+  posts           Post[] // Posts authored
+  comments        Comment[]
+  postOnUser      PostOnUser[]
+  commentOnUser   CommentOnUser[]
+  userOnTag       UserOnTag[]
+  followers       Follower[]      @relation("follower")
+  followings      Follower[]      @relation("following")
+  group           Group[]
+  account         Account[]
+  session         Session[]
+  media           Media[]
+  badges          UserOnBadge[]
+  notifications   Notification[]
+  postHistory     PostHistory[]
+  userPreferences UserPreference?
+
+  // Admin and moderation relations
+  reportedFlags       Flag[]           @relation("flagReporter")
+  resolvedFlags       Flag[]           @relation("flagResolver")
+  adminActions        AdminAction[]    @relation("adminActions")
+  adminPermission     AdminPermission? @relation("adminPermissions")
+  blockedPosts        Post[]           @relation("postBlocker")
+  moderatedFlags      Flag[]           @relation("assignedFlags")
+  moderatedCategories Category[]       @relation("categoryModerators")
+
+  // User status fields
+  blockedUntil  DateTime? // For temporary blocks
+  blockReason   String? // Reason for block
+  lastLoginAt   DateTime? // Track login attempts
+  loginAttempts Int       @default(0)
+
+  // Add counter caches for followers/following
+  totalFollowers Int @default(0)
+  totalFollowing Int @default(0)
+
+  // Add new relations
+  createdCategories Category[] @relation("categoryCreator")
+  createdTags       Tag[]      @relation("tagCreator")
+
+  @@index([username])
+  @@index([email])
+  @@index([trustLevel])
+  @@index([lastSeenAt])
+  @@index([totalFollowers]) // For sorting by popularity
+  @@index([totalFollowing])
 }
 
 // ✅ Group & UserOnGroup for Roles
 model Group {
   id          String    @id @default(cuid())
-  name        String    @unique
+  name        String
+  slug        String    @unique
   description String?
   ownerId     String
   createdAt   DateTime  @default(now())
@@ -62,29 +104,84 @@ model UserOnGroup {
 
 // ✅ Post with Extended Status
 model Post {
-  id         String     @id @default(cuid())
-  title      String     @db.VarChar(255)
-  content    String?
-  postStatus PostStatus @default(DRAFT)
-  authorId   String
+  id             String     @id @default(uuid())
+  title          String     @db.VarChar(255)
+  slug           String     @unique
+  content        String?
+  postStatus     PostStatus @default(DRAFT)
+  postType       PostType   @default(TOPIC)
+  authorId       String
+  categoryId     String?
+  isPinned       Boolean    @default(false)
+  isLocked       Boolean    @default(false)
+  viewCount      Int        @default(0)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  lastActivityAt DateTime   @default(now())
 
-  author     User         @relation(fields: [authorId], references: [id])
+  author     User          @relation(fields: [authorId], references: [id])
+  category   Category?     @relation(fields: [categoryId], references: [id])
   comments   Comment[]
   postOnUser PostOnUser[]
   tagOnPost  TagOnPost[]
-  media      Media?       @relation(fields: [mediaId], references: [id])
+  media      Media?        @relation(fields: [mediaId], references: [id])
   mediaId    String?
+  history    PostHistory[]
+  flags      Flag[]
 
-  @@index([title, content]) // Full-text search optimization
+  // Add tsvector columns for full-text search
+  titleSearch   Unsupported("tsvector")?
+  contentSearch Unsupported("tsvector")?
+
+  // Add new fields
+  blockedAt   DateTime? // When post was blocked
+  blockedBy   String? // Admin who blocked
+  blockReason String? // Why post was blocked
+
+  // Add new relations
+  blocker User? @relation("postBlocker", fields: [blockedBy], references: [id])
+
+  // Add counter caches
+  likesCount    Int @default(0)
+  commentsCount Int @default(0)
+  sharesCount   Int @default(0)
+
+  // Add vote counters
+  upVotesCount   Int @default(0)
+  downVotesCount Int @default(0)
+  version        Int @default(0)
+
+  tags Tag[]
+
+  // Add indexes for faster counting
+  @@index([authorId, postStatus])
+  @@index([postStatus, createdAt])
+  @@index([viewCount])
+  // Add GIN indexes for fast full-text search
+  @@index([titleSearch], type: Gin)
+  @@index([contentSearch], type: Gin)
+  @@index([blockedAt])
+  @@index([blockedBy])
+  @@index([likesCount, createdAt]) // For sorting by popularity
+  @@index([commentsCount, createdAt]) // For sorting by engagement
+  // Add indexes for vote sorting
+  @@index([upVotesCount, createdAt]) // For sorting by upvotes
+  @@index([downVotesCount, createdAt]) // For sorting by downvotes
+  @@index([sharesCount, createdAt]) // For sorting by shares
 }
 
 // ✅ Comment with Nested Replies & Likes/Votes
 model Comment {
-  id              String  @id @default(cuid())
+  id              String   @id @default(cuid())
   content         String?
   authorId        String
   parentCommentId String?
   commentOnPostId String
+  slug            String?  @unique
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  media           Media?   @relation(fields: [mediaId], references: [id])
+  mediaId         String?
 
   author        User @relation(fields: [authorId], references: [id])
   commentOnPost Post @relation(fields: [commentOnPostId], references: [id])
@@ -93,25 +190,52 @@ model Comment {
   replies       Comment[] @relation("CommentThread")
 
   commentOnUser CommentOnUser[]
+  flags         Flag[]
 
-  @@index([parentCommentId, content]) // Faster queries for nested comments
+  // Add tsvector column for full-text search
+  contentSearch Unsupported("tsvector")?
+
+  // Add vote counters
+  upVotesCount   Int @default(0)
+  downVotesCount Int @default(0)
+
+  // Add index for faster comment counting
+  @@index([commentOnPostId])
+  @@index([parentCommentId, content])
+  @@index([authorId])
+  @@index([contentSearch], type: Gin)
+  // Add indexes for vote sorting
+  @@index([upVotesCount, createdAt]) // For sorting by upvotes
+  @@index([downVotesCount, createdAt]) // For sorting by downvotes
 }
 
 // ✅ Relationships for Tagging & Following Tags
 model Tag {
   id          String      @id @default(cuid())
   name        String      @unique
+  slug        String      @unique
   type        TagType     @default(TAG)
   parentTagId String?
+  createdById String // Add creator reference
   tagOnPost   TagOnPost[]
   userOnTag   UserOnTag[]
 
+  // Add creator relation
+  creator   User    @relation("tagCreator", fields: [createdById], references: [id])
   parentTag Tag?    @relation("TagTree", fields: [parentTagId], references: [id])
   children  Tag[]   @relation("TagTree")
   media     Media?  @relation(fields: [mediaId], references: [id])
   mediaId   String?
 
+  nameSearch Unsupported("tsvector")?
+
+  posts Post[]
+
   @@index([name])
+  @@index([type])
+  @@index([slug])
+  @@index([nameSearch], type: Gin)
+  @@index([createdById])
 }
 
 model TagOnPost {
@@ -141,6 +265,8 @@ model PostOnUser {
   post   Post           @relation(fields: [postId], references: [id])
 
   @@id([userId, postId, type])
+  // Add index for faster like counting
+  @@index([postId, type])
 }
 
 model CommentOnUser {
@@ -197,7 +323,7 @@ model VerificationToken {
 
 // ✅ Media Handling
 model Media {
-  id         String  @id @default(cuid())
+  id         String    @id @default(cuid())
   path       String
   name       String
   width      Int
@@ -208,12 +334,16 @@ model Media {
   url        String
   mime       String
   userId     String
-  user       User    @relation(fields: [userId], references: [id])
+  user       User      @relation(fields: [userId], references: [id])
   posts      Post[]
   tags       Tag[]
   Group      Group[]
+  slug       String?   @unique
+  Comment    Comment[]
 
-  @@index([name]) // Optimize media lookups
+  @@index([name])
+  @@index([userId])
+  @@index([mime])
 }
 
 // ✅ ENUMs
@@ -226,6 +356,8 @@ enum SocialProvider {
 
 enum UserStatus {
   UNVERIFIED
+  ACTIVE // New status
+  INACTIVE // New status
   VERIFIED
   BLOCKED
 }
@@ -238,6 +370,10 @@ enum GroupRole {
 }
 
 enum PostType {
+  SMALL_ACTION
+  PRIVATE_MESSAGE
+  TOPIC
+  PINNED_TOPIC
   POST
   PAGE
   LIST
@@ -289,4 +425,237 @@ enum CommentOnUserType {
   SHARE
   UPVOTE
   DOWNVOTE
+}
+
+// New Badge System
+model Badge {
+  id          String        @id @default(cuid())
+  name        String        @unique
+  description String?
+  icon        String?
+  badgeType   BadgeType
+  users       UserOnBadge[]
+  createdAt   DateTime      @default(now())
+
+  @@index([badgeType])
+  @@index([name])
+}
+
+model UserOnBadge {
+  userId    String
+  badgeId   String
+  grantedAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  badge     Badge    @relation(fields: [badgeId], references: [id])
+
+  @@id([userId, badgeId])
+}
+
+// New Category Model
+model Category {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  slug         String   @unique
+  description  String?
+  color        String?
+  position     Int      @default(0)
+  parentId     String?
+  createdById  String // Add creator reference
+  isPrivate    Boolean  @default(false)
+  moderatorIds String[] // Array of moderator user IDs
+  settings     Json? // Store category-specific settings
+  guidelines   String? // Posting guidelines
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Add creator relation
+  creator    User       @relation("categoryCreator", fields: [createdById], references: [id])
+  parent     Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children   Category[] @relation("CategoryHierarchy")
+  posts      Post[]
+  moderators User[]     @relation("categoryModerators")
+
+  @@index([parentId])
+  @@index([position])
+  @@index([slug])
+  @@index([createdById])
+}
+
+// Post History for Revisions
+model PostHistory {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  content   String
+  title     String?
+  createdAt DateTime @default(now())
+
+  post   Post @relation(fields: [postId], references: [id])
+  editor User @relation(fields: [userId], references: [id])
+
+  @@index([postId, createdAt])
+  @@index([userId])
+}
+
+// New Notification System
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  message   String
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  metadata  Json? // Flexible metadata storage
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@index([type])
+}
+
+// User Preferences
+model UserPreference {
+  id               String  @id @default(cuid())
+  userId           String  @unique
+  emailDigest      Boolean @default(true)
+  webNotifications Boolean @default(true)
+  theme            String  @default("light")
+  locale           String  @default("en")
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+// New Enums
+enum TrustLevel {
+  NEW
+  BASIC
+  MEMBER
+  REGULAR
+  LEADER
+}
+
+enum BadgeType {
+  BRONZE
+  SILVER
+  GOLD
+}
+
+enum NotificationType {
+  MENTION
+  REPLY
+  QUOTE
+  LIKE
+  FOLLOW
+  BADGE
+  SYSTEM
+}
+
+// Add new Flag model
+model Flag {
+  id           String       @id @default(cuid())
+  reason       String
+  details      String?
+  status       FlagStatus   @default(PENDING)
+  reportReason ReportReason
+  reporterId   String
+  resolvedBy   String?
+  assignedTo   String? // Moderator assigned to handle
+  resolution   String? // How the flag was resolved
+  resolvedAt   DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  // Content relations
+  postId    String?
+  commentId String?
+  post      Post?    @relation(fields: [postId], references: [id])
+  comment   Comment? @relation(fields: [commentId], references: [id])
+
+  // User relations
+  reporter    User  @relation("flagReporter", fields: [reporterId], references: [id])
+  resolver    User? @relation("flagResolver", fields: [resolvedBy], references: [id])
+  assignedMod User? @relation("assignedFlags", fields: [assignedTo], references: [id])
+
+  @@index([status])
+  @@index([reporterId])
+  @@index([postId])
+  @@index([commentId])
+  @@index([createdAt])
+  @@index([assignedTo])
+  @@index([reportReason])
+}
+
+// Add new FlagStatus enum
+enum FlagStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  RESOLVED
+  DEFERRED
+}
+
+// Add AdminAction model for audit logging
+model AdminAction {
+  id         String     @id @default(cuid())
+  adminId    String
+  actionType ActionType
+  targetType TargetType
+  targetId   String
+  details    Json? // Store additional action details
+  reason     String? // Reason for the action
+  createdAt  DateTime   @default(now())
+
+  admin User @relation("adminActions", fields: [adminId], references: [id])
+
+  @@index([adminId])
+  @@index([actionType])
+  @@index([createdAt])
+}
+
+// Add AdminPermission model
+model AdminPermission {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  permissions Json // Stores permission flags
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation("adminPermissions", fields: [userId], references: [id])
+}
+
+// Add new enums for admin actions
+enum ActionType {
+  BLOCK_USER
+  UNBLOCK_USER
+  BLOCK_POST
+  DELETE_POST
+  CREATE_CATEGORY
+  UPDATE_CATEGORY
+  DELETE_CATEGORY
+  CREATE_TAG
+  UPDATE_TAG
+  DELETE_TAG
+  PIN_POST
+  LOCK_POST
+  MERGE_TAGS
+  ASSIGN_MODERATOR
+}
+
+enum TargetType {
+  USER
+  POST
+  COMMENT
+  CATEGORY
+  TAG
+}
+
+// Add new ReportReason enum
+enum ReportReason {
+  SPAM
+  HARASSMENT
+  INAPPROPRIATE
+  COPYRIGHT
+  MISINFORMATION
+  OTHER
 }

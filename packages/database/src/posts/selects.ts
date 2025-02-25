@@ -1,34 +1,26 @@
-import { PostOnUserType, Prisma } from "@prisma/client"
+import { Prisma } from "@prisma/client"
 
-export const postSelect = {
+export const PostSelect = {
   id: true,
   title: true,
   content: true,
-  createdAt: true,
-  updatedAt: true,
   slug: true,
   postStatus: true,
-  totalLike: true,
-  totalFollow: true,
-  image: {
-    select: {
-      id: true,
-      url: true,
-      previewUrl: true,
-    },
-  },
+  createdAt: true,
+  updatedAt: true,
+  upVotesCount: true,
+  downVotesCount: true,
+  viewCount: true,
+  likesCount: true,
+  commentsCount: true,
+  sharesCount: true,
   author: {
     select: {
       id: true,
-      name: true,
+      username: true,
+      firstName: true,
+      lastName: true,
       email: true,
-      image: true,
-    },
-  },
-  _count: {
-    select: {
-      comments: true,
-      postOnUser: true,
     },
   },
   tagOnPost: {
@@ -45,9 +37,5 @@ export const postSelect = {
 } satisfies Prisma.PostSelect
 
 export type TPostItem = Prisma.PostGetPayload<{
-  select: typeof postSelect
+  select: typeof PostSelect
 }>
-
-export type TCreatePostInput = Prisma.PostCreateInput
-
-export type TPostActionType = PostOnUserType | "UNLIKE" | "UNBOOKMARK"
