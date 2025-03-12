@@ -20,9 +20,12 @@ export interface IActionReturn<T> {
 }
 
 export interface IGetListResponse<T> {
-  data: T[]
-  total: number
-  page?: number
-  totalPages?: number
-  limit?: number
+  data: {
+    data: T[]
+    total: number
+    page?: number
+    totalPages?: number
+    limit?: number
+  }
+  error?: unknown
 }

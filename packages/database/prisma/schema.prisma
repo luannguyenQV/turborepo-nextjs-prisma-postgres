@@ -10,9 +10,13 @@ datasource db {
 
 // ✅ User Model with Status
 model User {
-  id          String     @id @default(cuid())
-  email       String?    @unique
-  username    String     @unique
+  id            String    @id @default(cuid())
+  name          String?   @unique
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+
+  // username    String     @unique
   firstName   String?
   lastName    String?
   bio         String?
@@ -28,15 +32,14 @@ model User {
   groups          UserOnGroup[]
   posts           Post[] // Posts authored
   comments        Comment[]
-  postOnUser      PostOnUser[]
-  commentOnUser   CommentOnUser[]
-  userOnTag       UserOnTag[]
+  postOnUsers     PostOnUser[]
+  commentOnUsers  CommentOnUser[]
+  userOnTags      UserOnTag[]
   followers       Follower[]      @relation("follower")
   followings      Follower[]      @relation("following")
-  group           Group[]
-  account         Account[]
-  session         Session[]
-  media           Media[]
+  accounts        Account[]
+  sessions        Session[]
+  medias          Media[]
   badges          UserOnBadge[]
   notifications   Notification[]
   postHistory     PostHistory[]
@@ -62,10 +65,11 @@ model User {
   totalFollowing Int @default(0)
 
   // Add new relations
-  createdCategories Category[] @relation("categoryCreator")
-  createdTags       Tag[]      @relation("tagCreator")
+  createdCategories Category[]      @relation("categoryCreator")
+  createdTags       Tag[]           @relation("tagCreator")
+  groupMembers      Group[]
+  Authenticator     Authenticator[]
 
-  @@index([username])
   @@index([email])
   @@index([trustLevel])
   @@index([lastSeenAt])
@@ -293,32 +297,56 @@ model Follower {
 
 // ✅ Authentication & Sessions
 model Account {
-  id                String  @id @default(cuid())
   userId            String
+  type              String
   provider          String
   providerAccountId String
   refresh_token     String?
   access_token      String?
   expires_at        Int?
-  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
-  @@unique([provider, providerAccountId])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
 }
 
 model Session {
-  id           String   @id @default(cuid())
   sessionToken String   @unique
   userId       String
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model VerificationToken {
   identifier String
-  token      String   @unique
+  token      String
   expires    DateTime
 
-  @@unique([identifier, token])
+  @@id([identifier, token])
+}
+
+model Authenticator {
+  credentialID         String  @unique
+  userId               String
+  providerAccountId    String
+  credentialPublicKey  String
+  counter              Int
+  credentialDeviceType String
+  credentialBackedUp   Boolean
+  transports           String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, credentialID])
 }
 
 // ✅ Media Handling

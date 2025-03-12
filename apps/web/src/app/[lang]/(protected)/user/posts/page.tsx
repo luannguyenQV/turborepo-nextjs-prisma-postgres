@@ -11,8 +11,8 @@ export async function generateMetadata(): Promise<Metadata> {
   const user = await getUser({ where: { id: session?.user?.id } })
 
   return {
-    title: `Posts - ${user?.data?.name}`,
-    description: `Posts of ${user?.data?.name}`,
+    title: `Posts - ${user?.data?.username}`,
+    description: `Posts of ${user?.data?.username}`,
   }
 }
 

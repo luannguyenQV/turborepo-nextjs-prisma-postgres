@@ -1,112 +1,147 @@
 "use server"
 
-import { Prisma, Tag } from "@prisma/client"
+import { Prisma } from "@prisma/client"
 import slugify from "slugify"
 
-import { LIMIT_PER_PAGE } from "../constant"
 import prisma from "../prisma"
-import { DEFAULT_LIMIT, DEFAULT_PAGE, IActionReturn, IGetListResponse } from "../shared/type"
-import { tagItemSelect, tagListSelect, TTagItem, TTagListItem } from "./selects"
+import { IActionReturn } from "../shared/type"
+import { TagListSelect, TagSelect, TTagItem, TTagListItem } from "./selects"
+
+export const getTag = async (
+  searchParams: Prisma.TagFindUniqueArgs
+): Promise<IActionReturn<TTagItem>> => {
+  try {
+    const tag = await prisma.tag.findUniqueOrThrow({
+      ...searchParams,
+      select: TagSelect,
+    })
+
+    return {
+      data: tag,
+    }
+  } catch (error) {
+    throw {
+      error: "NOT_FOUND",
+      data: null,
+    }
+  }
+}
 
 export const getTags = async (
-  tagsFindManyArgs: Prisma.TagFindManyArgs = {
-    take: LIMIT_PER_PAGE,
-    skip: DEFAULT_LIMIT * (DEFAULT_PAGE - 1),
-  }
-): Promise<IActionReturn<IGetListResponse<TTagListItem>>> => {
+  searchParams: Prisma.TagFindManyArgs
+): Promise<
+  IActionReturn<{
+    data: TTagListItem[]
+    total: number
+    totalPages: number
+    page: number
+    limit: number
+  }>
+> => {
   try {
-    const [data, total] = await Promise.all([
-      prisma.tag.findMany({
-        ...tagsFindManyArgs,
-        select: tagListSelect,
-      }),
+    const [total, tags] = await prisma.$transaction([
       prisma.tag.count({
-        where: tagsFindManyArgs?.where || {},
+        where: searchParams?.where,
+      }),
+      prisma.tag.findMany({
+        ...searchParams,
+        select: TagListSelect,
       }),
     ])
 
     return {
       data: {
-        data,
         total,
-        limit: tagsFindManyArgs?.take || DEFAULT_LIMIT,
+        data: tags,
+        page: Number(searchParams?.skip),
+        limit: Number(searchParams?.take),
+        totalPages: Math.ceil(total / Number(searchParams?.take)),
       },
     }
   } catch (error) {
-    throw {
+    return {
       data: {
         data: [],
         total: 0,
-        limit: DEFAULT_LIMIT,
+        totalPages: 0,
+        page: Number(searchParams?.skip),
+        limit: Number(searchParams?.take),
       },
       error,
     }
   }
 }
 
-type GetTagProps = {
-  tagIdOrSlug: string
-}
-
-export const getTag = async ({
-  tagIdOrSlug,
-}: GetTagProps): Promise<IActionReturn<TTagItem | null>> => {
+export const createTag = async (data: Prisma.TagCreateInput): Promise<IActionReturn<TTagItem>> => {
+  let newTag: TTagItem
   try {
-    const data = await prisma.tag.findFirst({
-      where: {
-        OR: [
-          {
-            id: tagIdOrSlug,
-          },
-          {
-            slug: tagIdOrSlug,
-          },
-        ],
-      },
-      select: tagItemSelect,
+    // Generate slug if not provided
+    if (!data.slug && data.name) {
+      data.slug = slugify(data.name.toLowerCase()) + "-" + Date.now()
+    }
+
+    newTag = await prisma.tag.create({
+      data,
+      select: TagSelect,
     })
 
     return {
-      data,
+      data: newTag,
     }
-  } catch (error) {
-    return {
-      error,
+  } catch (error: any) {
+    throw {
+      data: null,
+      error: error,
     }
   }
 }
 
-export const createTag = async (tag: Prisma.TagCreateInput): Promise<TTagItem> => {
-  return prisma.tag.create({
-    data: {
-      ...tag,
-      slug: tag.slug || slugify(tag.name.toLocaleLowerCase()) + "-" + Date.now(),
-    },
-    select: tagItemSelect,
-  })
+export const updateTag = async (
+  id: string,
+  data: Prisma.TagUpdateInput
+): Promise<IActionReturn<TTagItem>> => {
+  try {
+    // If name is being updated, update the slug as well
+    if (data.name && typeof data.name === "string") {
+      data.slug = slugify(data.name.toLowerCase()) + "-" + Date.now()
+    }
+
+    const tag = await prisma.tag.update({
+      where: {
+        id,
+      },
+      data,
+      select: TagSelect,
+    })
+
+    return {
+      data: tag,
+    }
+  } catch (error: any) {
+    console.error("Error updating tag:", error)
+    throw {
+      data: null,
+      error: "Failed to update tag",
+    }
+  }
 }
 
-export const updateTag = async ({
-  tagId,
-  tag,
-}: {
-  tagId: string
-  tag: Prisma.TagUpdateArgs["data"]
-}): Promise<TTagItem> => {
-  return prisma.tag.update({
-    where: {
-      id: tagId,
-    },
-    data: tag,
-    select: tagItemSelect,
-  })
-}
+export const deleteTag = async (id: string): Promise<IActionReturn<TTagItem>> => {
+  try {
+    const tag = await prisma.tag.delete({
+      where: {
+        id,
+      },
+      select: TagSelect,
+    })
 
-export const deleteTag = async (tagId: string): Promise<TTagItem> => {
-  return prisma.tag.delete({
-    where: {
-      id: tagId,
-    },
-    select: tagItemSelect,
-  })
+    return {
+      data: tag,
+    }
+  } catch (error) {
+    throw {
+      data: null,
+      error: error,
+    }
+  }
 }

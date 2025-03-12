@@ -1,37 +1,76 @@
 import { Prisma } from "@prisma/client"
 
-export const userDetailSelect = {
+export const UserSelect = {
   id: true,
-  name: true,
+  username: true,
+  firstName: true,
+  lastName: true,
   email: true,
-  image: true,
   bio: true,
-  address: true,
-  website: true,
-  totalFollower: true,
+  userStatus: true,
+  trustLevel: true,
+  lastSeenAt: true,
+  createdAt: true,
+  updatedAt: true,
+  isAdmin: true,
+  isModerator: true,
+  totalFollowers: true,
   totalFollowing: true,
-  totalPost: true,
-  totalView: true,
+  blockedUntil: true,
+  blockReason: true,
+  lastLoginAt: true,
+  loginAttempts: true,
+  _count: {
+    select: {
+      posts: true,
+      comments: true,
+      followers: true,
+      followings: true,
+    },
+  },
+} satisfies Prisma.UserSelect
+
+export type TUserItem = Prisma.UserGetPayload<{
+  select: typeof UserSelect
+}>
+
+export const UserDetailSelect = {
+  id: true,
+  username: true,
+  firstName: true,
+  lastName: true,
+  email: true,
+  bio: true,
+  userStatus: true,
+  trustLevel: true,
+  lastSeenAt: true,
+  createdAt: true,
+  updatedAt: true,
+  isAdmin: true,
+  isModerator: true,
+  totalFollowers: true,
+  totalFollowing: true,
+  blockedUntil: true,
+  blockReason: true,
+  lastLoginAt: true,
+  loginAttempts: true,
   password: true,
+  _count: {
+    select: {
+      posts: true,
+      comments: true,
+      followers: true,
+      followings: true,
+      badges: true,
+      media: true,
+    },
+  },
 } satisfies Prisma.UserSelect
 
 export type TUserDetail = Prisma.UserGetPayload<{
-  select: typeof userDetailSelect
+  select: typeof UserDetailSelect
 }>
 
-export const userSelect = {
-  id: true,
-  name: true,
-  email: true,
-  image: true,
-  bio: true,
-  address: true,
-  website: true,
-  totalFollower: true,
-  totalFollowing: true,
-  totalPost: true,
-  totalView: true,
-  password: true,
-  totalFollowers: true,
-  totalFollowing: true,
-} satisfies Prisma.UserSelect
+// For backward compatibility
+export const userSelect = UserSelect
+export const userDetailSelect = UserDetailSelect

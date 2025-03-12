@@ -1,16 +1,8 @@
 import { createImage, deleteImage, getImage, getImages, updateImage } from "./images/queries"
 import { TImage } from "./images/selects"
 import { IImageFilter, IListImageResponse, ImageOrderBys } from "./images/type"
-import {
-  createPost,
-  deletePost,
-  getPost,
-  getPosts,
-  updatePost,
-  updatePostStatus,
-} from "./posts/queries"
-import { TCreatePostInput, TPostActionType, TPostItem } from "./posts/selects"
-import { TGetPostsRequest, TGetPostsResponse } from "./posts/type"
+import { createPost, deletePost, getPost, getPosts, updatePost } from "./posts/queries"
+import { TPostItem } from "./posts/selects"
 import prisma from "./prisma"
 import {
   DEFAULT_LIMIT,
@@ -23,7 +15,7 @@ import {
 import { createTag, getTag, getTags } from "./tags/queries"
 import type { TTagItem, TTagListItem } from "./tags/selects"
 import { tagListSelect } from "./tags/selects"
-import { createUser, getUser, updateUser } from "./users/queries"
+import { createUser, deleteUser, getUser, updateUser } from "./users/queries"
 import { TUserDetail } from "./users/selects"
 
 export * from "@prisma/client"
@@ -42,7 +34,6 @@ export {
   createPost,
   updatePost,
   deletePost,
-  updatePostStatus,
   FilterValues,
   PeriodValues,
 
@@ -63,13 +54,9 @@ export type {
   //Tags
   TTagItem,
   TTagListItem,
-  TCreatePostInput,
-  TPostActionType,
 
   // Posts
   TPostItem,
-  TGetPostsRequest,
-  TGetPostsResponse,
 
   // Images
   IImageFilter,

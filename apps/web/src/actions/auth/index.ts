@@ -19,6 +19,7 @@ export const signInWithCredentials = async (email: string, password: string) => 
 }
 
 export const signInWithGithub = async () => {
+  console.log("signInWithGithub...")
   await signIn("github")
 }
 
@@ -38,13 +39,10 @@ export const signUp = async (
     const hashedPassword = await bcryptjs.hash(password, 10)
 
     await createUser({
-      data: {
-        email,
-        password: hashedPassword,
-      },
+      email,
+      password: hashedPassword,
+      username: email.split("@")[0],
     })
-
-    console.log("create user...successfully")
 
     // create verification code
     const token = crypto.randomUUID()
@@ -56,8 +54,6 @@ export const signUp = async (
       },
     })
 
-    console.log("verification token...successfully")
-
     // send email
     await sendEmail({
       email,
@@ -68,7 +64,6 @@ export const signUp = async (
       }),
     })
   } catch (error) {
-    console.error("signUp.error", error)
     if (error?.error?.code === "P2002") {
       return {
         formErrors: null,

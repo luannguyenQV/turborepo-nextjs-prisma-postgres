@@ -1,48 +1,61 @@
 import { Prisma } from "@prisma/client"
 
-export const tagListSelect = {
+export const TagSelect = {
   id: true,
   name: true,
   slug: true,
-  description: true,
-  image: {
+  type: true,
+  createdById: true,
+  parentTagId: true,
+  mediaId: true,
+  media: {
     select: {
       id: true,
       url: true,
     },
   },
-  type: true,
-  totalFollowers: true,
-  updatedAt: true,
-  createdAt: true,
-} satisfies Prisma.TagSelect
-
-export const tagItemSelect = {
-  id: true,
-  name: true,
-  slug: true,
-  description: true,
-  type: true,
-  totalFollowers: true,
-  updatedAt: true,
-  createdAt: true,
-  image: {
+  creator: {
     select: {
       id: true,
-      url: true,
+      username: true,
     },
   },
-  // _count: {
-  //   select: {
-  //     tagOnPost: true,
-  //   },
-  // },
+  _count: {
+    select: {
+      tagOnPost: true,
+      userOnTag: true,
+    },
+  },
 } satisfies Prisma.TagSelect
 
 export type TTagItem = Prisma.TagGetPayload<{
-  select: typeof tagItemSelect
+  select: typeof TagSelect
 }>
 
+export const TagListSelect = {
+  id: true,
+  name: true,
+  slug: true,
+  type: true,
+  createdById: true,
+  mediaId: true,
+  media: {
+    select: {
+      id: true,
+      url: true,
+    },
+  },
+  _count: {
+    select: {
+      tagOnPost: true,
+    },
+  },
+} satisfies Prisma.TagSelect
+
 export type TTagListItem = Prisma.TagGetPayload<{
-  select: typeof tagListSelect
+  select: typeof TagListSelect
 }>
+
+// For backward compatibility
+export const tagItemSelect = TagSelect
+export const tagListSelect = TagListSelect

@@ -1,27 +1,20 @@
 import { Suspense } from "react"
 import { Metadata } from "next"
 
-import { PostStatus } from "database"
-import { PostSkeleton } from "ui"
+import { Typography } from "ui"
 
-import Filter from "@/molecules/home/filter"
-import PostList from "@/molecules/posts/post-list"
+import PostPagination from "@/molecules/posts/post-pagination"
 
 export const metadata: Metadata = {
-  title: "Next-forum - Share the best things",
-  description: "Share the best things in the world",
+  title: "Home",
+  description: "Welcome to our community forum",
 }
 
-export default async function Page() {
+export default function HomePage() {
   return (
-    <div>
-      <Filter />
-      <Suspense fallback={<PostSkeleton total={10} />}>
-        <PostList
-          getPostParams={{
-            postStatus: PostStatus.PUBLISHED,
-          }}
-        />
+    <div className="container py-6">
+      <Suspense fallback={<div className="py-8 text-center">Loading posts...</div>}>
+        <PostPagination />
       </Suspense>
     </div>
   )

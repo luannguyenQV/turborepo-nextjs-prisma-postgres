@@ -4,9 +4,8 @@ import { Prisma } from "@prisma/client"
 import slugify from "slugify"
 
 import prisma from "../prisma"
-import { IActionReturn } from "../shared/type"
+import { IActionReturn, IGetListResponse } from "../shared/type"
 import { PostSelect, TPostItem } from "./selects"
-import { TGetPostsResponse } from "./type"
 
 export const getPost = async (
   searchParams: Prisma.PostFindUniqueArgs
@@ -30,7 +29,7 @@ export const getPost = async (
 
 export const getPosts = async (
   searchParams: Prisma.PostFindManyArgs
-): Promise<TGetPostsResponse> => {
+): Promise<IGetListResponse<TPostItem>> => {
   try {
     const [total, posts] = await prisma.$transaction([
       prisma.post.count({
@@ -65,7 +64,7 @@ export const getPosts = async (
   }
 }
 
-export const create = async (data: Prisma.PostCreateInput): Promise<IActionReturn<TPostItem>> => {
+export const createPost = async (data: Prisma.PostCreateInput): Promise<IActionReturn<TPostItem>> => {
   let newPost: TPostItem
   try {
     newPost = await prisma.post.create({
@@ -84,7 +83,7 @@ export const create = async (data: Prisma.PostCreateInput): Promise<IActionRetur
   }
 }
 
-export const update = async (
+export const updatePost = async (
   id: string,
   data: Prisma.PostUpdateInput,
   userId: string

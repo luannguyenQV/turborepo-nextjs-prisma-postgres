@@ -4,70 +4,137 @@ import { Prisma } from "@prisma/client"
 
 import prisma from "../prisma"
 import { IActionReturn } from "../shared/type"
-import { TUserDetail, userDetailSelect } from "./selects"
+import { TUserDetail, TUserItem, UserDetailSelect, UserSelect } from "./selects"
 
 export const getUser = async (
-  userFindFirstArgs: Prisma.UserFindFirstArgs
+  searchParams: Prisma.UserFindUniqueArgs
 ): Promise<IActionReturn<TUserDetail>> => {
   try {
-    const data = await prisma.user.findFirst({
-      ...userFindFirstArgs,
-      select: userDetailSelect,
+    const user = await prisma.user.findUniqueOrThrow({
+      ...searchParams,
+      select: UserDetailSelect,
     })
 
-    if (!data) {
-      throw {
-        data: null,
-        error: "NOT_FOUND",
-      }
-    }
-
     return {
-      data,
+      data: user,
     }
   } catch (error) {
     throw {
-      error,
+      error: "NOT_FOUND",
       data: null,
+    }
+  }
+}
+
+export const getUsers = async (
+  searchParams: Prisma.UserFindManyArgs
+): Promise<
+  IActionReturn<{
+    data: TUserItem[]
+    total: number
+    totalPages: number
+    page: number
+    limit: number
+  }>
+> => {
+  try {
+    const [total, users] = await prisma.$transaction([
+      prisma.user.count({
+        where: searchParams?.where,
+      }),
+      prisma.user.findMany({
+        ...searchParams,
+        select: UserSelect,
+      }),
+    ])
+
+    return {
+      data: {
+        total,
+        data: users,
+        page: Number(searchParams?.skip),
+        limit: Number(searchParams?.take),
+        totalPages: Math.ceil(total / Number(searchParams?.take)),
+      },
+    }
+  } catch (error) {
+    return {
+      data: {
+        data: [],
+        total: 0,
+        totalPages: 0,
+        page: Number(searchParams?.skip),
+        limit: Number(searchParams?.take),
+      },
+      error,
     }
   }
 }
 
 export const createUser = async (
-  userCreateArgs: Prisma.UserCreateArgs
+  data: Prisma.UserCreateInput
 ): Promise<IActionReturn<TUserDetail>> => {
+  let newUser: TUserDetail
+
+  console.log("createUser.data", data)
   try {
-    const data = await prisma.user.create({
-      ...userCreateArgs,
-      select: userDetailSelect,
+    newUser = await prisma.user.create({
+      data,
+      select: UserDetailSelect,
     })
 
     return {
-      data,
+      data: newUser,
     }
-  } catch (error) {
+  } catch (error: any) {
     throw {
-      error,
       data: null,
+      error: error,
     }
   }
 }
 
 export const updateUser = async (
-  userUpdateArgs: Prisma.UserUpdateArgs
+  id: string,
+  data: Prisma.UserUpdateInput
 ): Promise<IActionReturn<TUserDetail>> => {
   try {
-    const data = await prisma.user.update({
-      ...userUpdateArgs,
-      select: userDetailSelect,
-    })
-    return {
+    const user = await prisma.user.update({
+      where: {
+        id,
+      },
       data,
+      select: UserDetailSelect,
+    })
+
+    return {
+      data: user,
+    }
+  } catch (error: any) {
+    console.error("Error updating user:", error)
+    throw {
+      data: null,
+      error: "Failed to update user",
+    }
+  }
+}
+
+export const deleteUser = async (id: string): Promise<IActionReturn<TUserDetail>> => {
+  try {
+    const user = await prisma.user.delete({
+      where: {
+        id,
+      },
+      select: UserDetailSelect,
+    })
+
+    return {
+      data: user,
     }
   } catch (error) {
     throw {
-      error,
       data: null,
+      error: error,
     }
   }
 }
