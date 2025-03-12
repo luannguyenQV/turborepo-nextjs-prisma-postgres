@@ -39,4 +39,3 @@ export const PostSelect = {
 export type TPostItem = Prisma.PostGetPayload<{
   select: typeof PostSelect
 }>
-

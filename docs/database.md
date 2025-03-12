@@ -44,7 +44,6 @@
   - Add block reason and notes
   - View block history
   - Unblock users manually
-  
 - **User Activity Monitoring**
   - View user activity logs
   - Track login attempts
@@ -60,7 +59,6 @@
   - Review reported posts
   - Pin/unpin important posts
   - Lock/unlock discussions
-  
 - **Comment Management**
   - Hide/show comments
   - Delete inappropriate comments
@@ -76,7 +74,6 @@
   - Manage category hierarchy
   - Set category permissions
   - Delete/merge categories
-  
 - **Category Settings**
   - Set posting guidelines
   - Configure auto-moderation
@@ -92,7 +89,6 @@
   - Set tag descriptions
   - Control tag usage
   - Merge similar tags
-  
 - **Tag Settings**
   - Set tag permissions
   - Configure tag suggestions
@@ -103,6 +99,7 @@
 ### 5. Admin Tools
 
 - **Dashboard**
+
   - Activity overview
   - Moderation queue
   - Recent actions log
@@ -119,6 +116,7 @@
 ### 6. Permission Management
 
 - **Role-Based Access**
+
   - Define admin roles
   - Set role permissions
   - Manage role assignments
@@ -140,6 +138,7 @@
 ### 7. Reporting System
 
 - **Content Reports**
+
   - Review reported items
   - Track report status
   - Assign to moderators
@@ -147,7 +146,7 @@
   - Notify reporters
 
 - **Report Categories**
-  
+
   ```typescript
   enum ReportReason {
     SPAM
@@ -162,6 +161,7 @@
 ### 8. System Configuration
 
 - **Site Settings**
+
   - General configuration
   - Feature toggles
   - Theme management
@@ -178,6 +178,7 @@
 ### 9. Analytics & Reporting
 
 - **Usage Statistics**
+
   - User engagement
   - Content metrics
   - Moderation actions
@@ -194,6 +195,7 @@
 ### 10. Communication Tools
 
 - **Announcements**
+
   - Site-wide notices
   - Category announcements
   - User notifications
@@ -371,16 +373,16 @@ erDiagram
     User ||--o{ Notification : "receives"
     User ||--o{ Category : "creates"
     User ||--o{ Tag : "creates"
-    
+
     Post ||--o{ Comment : "has"
     Post }|--|| Category : "belongs_to"
     Post ||--o{ PostHistory : "tracks"
     Post ||--o{ Flag : "receives"
-    
+
     Category ||--o{ Category : "has_children"
     Tag ||--o{ Tag : "has_children"
     Comment ||--o{ Comment : "has_replies"
-    
+
     Badge }o--o{ User : "awarded_to"
     Tag }o--o{ Post : "tagged_with"
     User }o--o{ User : "follows"
@@ -498,23 +500,27 @@ CREATE INDEX idx_media_mime ON "Media"(mime);
 ## Key Features Implementation
 
 1. **Full-Text Search**
+
    - Uses PostgreSQL tsvector for efficient search
    - Indexes on post title and content
    - Indexes on comment content
    - Indexes on tag names
 
 2. **Hierarchical Content**
+
    - Categories with parent-child relationships
    - Tags with optional parent-child structure
    - Comments with nested replies
 
 3. **Activity Tracking**
+
    - Post view counts
    - Last activity timestamps
    - User engagement metrics
    - Content popularity tracking
 
 4. **Moderation System**
+
    - Flag queue for content moderation
    - User trust levels
    - Content status management

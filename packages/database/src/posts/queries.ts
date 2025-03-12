@@ -64,7 +64,9 @@ export const getPosts = async (
   }
 }
 
-export const createPost = async (data: Prisma.PostCreateInput): Promise<IActionReturn<TPostItem>> => {
+export const createPost = async (
+  data: Prisma.PostCreateInput
+): Promise<IActionReturn<TPostItem>> => {
   let newPost: TPostItem
   try {
     newPost = await prisma.post.create({
