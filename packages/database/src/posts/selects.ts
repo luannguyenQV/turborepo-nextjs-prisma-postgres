@@ -17,7 +17,6 @@ export const PostSelect = {
   author: {
     select: {
       id: true,
-      username: true,
       firstName: true,
       lastName: true,
       email: true,

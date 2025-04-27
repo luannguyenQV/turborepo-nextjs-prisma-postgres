@@ -5,20 +5,19 @@ import { redirect } from "next/navigation"
 
 import prisma, {
   createPost,
+  PostCreateInputParams,
   PostOnUserType,
   PostStatus,
-  Session,
-  TCreatePostInput,
+  Prisma,
   TPostItem,
   updatePost,
-  updatePostStatus,
 } from "database"
 import { toast } from "react-toastify"
 import * as z from "zod"
 
 import { auth } from "@/configs/auth"
 import APP_ROUTES from "@/constants/routes"
-import { ActionState, validatedActionWithUser } from "@/libs/validationAction"
+import { ActionState } from "@/libs/validationAction"
 import { TUserItem, userSelect } from "@/types/users"
 
 export const getTotalActions = async ({
@@ -149,9 +148,9 @@ export const removeRelation = async ({
 
 export const getLikers = async ({ postId }: { postId: string }) => {
   try {
-    const likers: TUserItem[] = await prisma.user.findMany({
+    const likers = (await prisma.user.findMany({
       where: {
-        postOnUser: {
+        postOnUsers: {
           some: {
             postId,
             type: PostOnUserType.LIKE,
@@ -159,7 +158,7 @@ export const getLikers = async ({ postId }: { postId: string }) => {
         },
       },
       select: userSelect,
-    })
+    })) as unknown as TUserItem[]
 
     return {
       data: likers,
@@ -175,15 +174,24 @@ export async function onTogglePost(
   _
 ): Promise<{ post: TPostItem }> {
   try {
-    const { data } = await updatePostStatus(
+    // Implementation for post toggle status
+    if (!prevState.post?.id || !prevState.post?.author?.id) {
+      throw "Invalid post data"
+    }
+
+    const result = await updatePost(
       prevState.post.id,
-      prevState.post.postStatus === PostStatus.DRAFT ? PostStatus.PUBLISHED : PostStatus.DRAFT,
-      prevState.post?.author?.id
+      {
+        postStatus:
+          prevState.post.postStatus === PostStatus.DRAFT ? PostStatus.PUBLISHED : PostStatus.DRAFT,
+      },
+      prevState.post.author.id
     )
 
-    return { post: data }
+    return { post: result.data }
   } catch (error) {
     toast.error(error)
+    return { post: prevState.post }
   } finally {
     revalidatePath(`/post/${prevState.post.slug}`)
   }
@@ -195,15 +203,44 @@ export const handleCreateUpdatePost = async ({
   userId,
 }: {
   postId: string
-  data: TCreatePostInput
+  data: PostCreateInputParams
   userId: string
 }) => {
   let newPostId = postId
   try {
     if (postId) {
-      await updatePost(postId, data, userId)
+      // For updates, transform the data to PostUpdateInput manually
+      const updateData = {
+        title: data.title,
+        content: data.content,
+        isPinned: data.isPinned,
+        isLocked: data.isLocked,
+        postStatus: data.postStatus,
+        postType: data.postType,
+      } as Prisma.PostUpdateInput
+
+      // Handle category connection if provided
+      if (data.categoryId) {
+        updateData.category = {
+          connect: { id: data.categoryId },
+        }
+      }
+
+      // Handle media connection if provided
+      if (data.mediaId) {
+        updateData.media = {
+          connect: { id: data.mediaId },
+        }
+      }
+
+      await updatePost(postId, updateData, userId)
     } else {
-      const post = await createPost(data, userId)
+      // For creation, directly use createPost with our params
+      // It will handle the transformation internally
+      const post = await createPost({
+        ...data,
+        authorId: userId,
+      })
       newPostId = post?.data?.slug
     }
   } catch (error) {

@@ -1,12 +1,12 @@
 import { Metadata } from "next"
 
-import { getPost } from "database"
+import { findPostBySlugOrId } from "database"
 
 import PostForm from "@/molecules/post-form"
 
 export async function generateMetadata(props): Promise<Metadata> {
   const params = await props.params
-  const post = await getPost({ postIdOrSlug: params?.postId as string })
+  const post = await findPostBySlugOrId(params?.postId)
 
   return {
     title: post?.data?.title,
@@ -16,7 +16,7 @@ export async function generateMetadata(props): Promise<Metadata> {
 
 export default async function Page(props: { params: Promise<{ postId: string }> }) {
   const params = await props.params
-  const post = await getPost({ postIdOrSlug: params?.postId as string })
+  const post = await findPostBySlugOrId(params?.postId)
 
   return <PostForm post={post?.data} />
 }

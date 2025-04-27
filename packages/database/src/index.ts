@@ -1,8 +1,16 @@
 import { createImage, deleteImage, getImage, getImages, updateImage } from "./images/queries"
 import { TImage } from "./images/selects"
 import { IImageFilter, IListImageResponse, ImageOrderBys } from "./images/type"
-import { createPost, deletePost, getPost, getPosts, updatePost } from "./posts/queries"
+import {
+  createPost,
+  deletePost,
+  findPostBySlugOrId,
+  getPost,
+  getPosts,
+  updatePost,
+} from "./posts/queries"
 import { TPostItem } from "./posts/selects"
+import { PostCreateInputParams } from "./posts/utils"
 import prisma from "./prisma"
 import {
   DEFAULT_LIMIT,
@@ -34,6 +42,7 @@ export {
   createPost,
   updatePost,
   deletePost,
+  findPostBySlugOrId,
   FilterValues,
   PeriodValues,
 
@@ -57,6 +66,7 @@ export type {
 
   // Posts
   TPostItem,
+  PostCreateInputParams,
 
   // Images
   IImageFilter,

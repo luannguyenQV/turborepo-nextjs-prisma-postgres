@@ -9,14 +9,14 @@ import BookmarkButton from "@/molecules/posts/post-item/bookmark-button"
 
 import "./tocbot.css"
 
-import { getPost, PostStatus } from "database"
+import { findPostBySlugOrId, PostStatus } from "database"
 
 import { auth } from "@/configs/auth"
 import { TSearchParams } from "@/types"
 
 export async function generateMetadata(props): Promise<Metadata> {
   const params = await props.params
-  const post = await getPost({ postIdOrSlug: params?.postId })
+  const post = await findPostBySlugOrId(params?.postId)
 
   return {
     title: post?.data?.title,
@@ -30,7 +30,7 @@ export default async function Page(props: {
 }) {
   const searchParams = await props.searchParams
   const params = await props.params
-  const post = await getPost({ postIdOrSlug: params?.postId })
+  const post = await findPostBySlugOrId(params?.postId)
   const session = await auth()
 
   if (

@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server"
 
-import prisma from "database"
+import prisma, { findPostBySlugOrId } from "database"
 
 export async function GET(
   request: NextRequest,
@@ -8,30 +8,16 @@ export async function GET(
 ) {
   const params = await props.params
   try {
-    const post = await prisma.post.findUnique({
-      where: {
-        // postStatus: PostStatus.PUBLISHED,
-        // id: params.postIdOrSlug,
-        slug: params.postIdOrSlug,
-        // OR: [
-        //   {
-        //     id: params.postIdOrSlug,
-        //   },
-        //   {
-        //     slug: params.postIdOrSlug,
-        //   },
-        // ],
-      },
-      // select: postSelect,
-    })
+    const result = await findPostBySlugOrId(params.postIdOrSlug)
 
-    if (!post)
+    if (!result || !result.data) {
       return Response.json({
         status: 404,
         message: "Post not found",
       })
+    }
 
-    return Response.json(post, { status: 200 })
+    return Response.json(result.data, { status: 200 })
   } catch (error) {
     return Response.error()
   }

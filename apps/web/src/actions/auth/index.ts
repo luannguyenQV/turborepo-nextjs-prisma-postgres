@@ -19,7 +19,6 @@ export const signInWithCredentials = async (email: string, password: string) => 
 }
 
 export const signInWithGithub = async () => {
-  console.log("signInWithGithub...")
   await signIn("github")
 }
 
@@ -41,7 +40,7 @@ export const signUp = async (
     await createUser({
       email,
       password: hashedPassword,
-      username: email.split("@")[0],
+      name: email.split("@")[0],
     })
 
     // create verification code

@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client"
 
 export const UserSelect = {
   id: true,
-  username: true,
+  name: true,
   firstName: true,
   lastName: true,
   email: true,
@@ -36,7 +36,7 @@ export type TUserItem = Prisma.UserGetPayload<{
 
 export const UserDetailSelect = {
   id: true,
-  username: true,
+  name: true,
   firstName: true,
   lastName: true,
   email: true,
@@ -62,7 +62,7 @@ export const UserDetailSelect = {
       followers: true,
       followings: true,
       badges: true,
-      media: true,
+      medias: true,
     },
   },
 } satisfies Prisma.UserSelect
